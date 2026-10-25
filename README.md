@@ -3,6 +3,13 @@
 > **零伺服器成本、100% 掌握個人財務資料主權！**  
 > 結合 **Google Sheets 強大公式連動** 與 **Google Apps Script 行動版 Web App**，打造媲美原生 App 的隨手記帳、多幣別即時換算、每日動態預算控管與總資產追蹤系統。
 
+## 🎮 線上互動試用版 (Live Demo)
+
+👉 **[點此立即體驗線上互動試用版 (GitHub Pages Demo)](./index.html)** *(上傳至 GitHub 並開啟 GitHub Pages 後即可直接線上把玩！)*
+
+- **免安裝、免登入即可體驗全部功能**：本專案根目錄內建 [`index.html`](index.html) 沙盒試用版（自動模擬 Google Sheets 7 大工作表公式連動）。
+- 試用者可直接測試 **TWD / USD / JPY 多幣別記帳、內建計算機、收入入帳、帳戶轉帳、一鍵餘額校準、歷史紀錄修改刪除**，所有試用資料僅暫存於瀏覽器 `localStorage`，並可隨時點選頂部「🔄 重置資料」恢復初始狀態！
+
 ---
 
 ## ✨ 核心功能亮點
@@ -78,14 +85,15 @@ flowchart TB
 
 ```text
 .
+├── index.html                                 # 🎮 GitHub Pages 線上互動試用版（含瀏覽器沙盒模擬引擎，免後端即可試玩！）
 ├── README.md                                  # 專案總覽與快速入門（本檔案）
 ├── LICENSE                                    # MIT 開源授權條款
 ├── docs/
 │   ├── USER_MANUAL.md                         # 📖 完整圖文步驟安裝與使用手冊（強烈建議先看這篇！）
 │   └── SHEET_ARCHITECTURE.md                  # 📐 試算表 7 大工作表公式與架構深度解析
 ├── src/
-│   ├── Code.gs                                # ⚙️ Google Apps Script 後端程式碼
-│   └── Page.html                              # 🎨 前端行動版 Web App / 側邊欄介面程式碼
+│   ├── Code.gs                                # ⚙️ Google Apps Script 後端程式碼（貼入 Google 試算表使用）
+│   └── Page.html                              # 🎨 前端行動版 Web App / 側邊欄介面程式碼（貼入 Google 試算表使用）
 └── template/
     └── 2026雙幣記帳與資產管理_範本.xlsx          # 📊 已去識別化、含示範資料與完整公式的試算表範本
 ```
@@ -105,6 +113,18 @@ flowchart TB
 3. **部署為手機 Web App ＆ 啟用定時器**  
    - 在 Apps Script 右上角點選 **「部署」>「新增部署作業」**，類型選擇 **「網頁應用程式」**，執行身分選「我」，誰可以存取選「僅限我自己」，部署後即可取得專屬手機記帳網址！
    - 回到 Google 試算表重新整理網頁，點選上方出現的 **「💰 記帳助手」>「⏰ 重新建立自動定時器」**，完成授權即可啟用每日預算重算與自動固定扣款。
+
+---
+
+## 🌐 如何在 GitHub 開啟線上試用網頁 (GitHub Pages)？
+
+如果您將本專案上傳（或 Fork）到自己的 GitHub，只需 **3 個點擊** 就能生成一個公開的試用網址分享給朋友或社群：
+
+1. 進入您的 GitHub Repository 頁面，點選上方選單最右側的 **「Settings（設定）」**。
+2. 在左側選單找到並點選 **「Pages」**。
+3. 在 **Build and deployment > Branch** 下拉選單中，將 `None` 改選為 **`main`**（資料夾維持 `/(root)`），然後點擊 **「Save」**。
+4. 等待約 1 分鐘後重新整理頁面，上方就會出現您的專屬試用網址：  
+   `https://<您的GitHub帳號>.github.io/<您的Repo名稱>/`
 
 ---
 

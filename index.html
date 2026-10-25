@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <title>💰 Google Sheet 記帳助手 — 線上互動試用版 (Live Demo)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      :root {
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-top: env(safe-area-inset-top, 0px);
+      }
+      body { 
+        padding: 10px; 
+        padding-top: calc(10px + var(--safe-top));
+        padding-bottom: calc(24px + var(--safe-bottom));
+        font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "Segoe UI", Roboto, sans-serif; 
+        background-color: #f0f4f7; 
+        -webkit-tap-highlight-color: transparent;
+      }
+      .view { display: none; } 
+      .view.active { display: block; animation: fadeIn 0.25s; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      .card-panel { padding: 15px; border-radius: 15px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+      
+      /* 🌈 動態 Header */
+      .home-header { color: white; padding: 25px 15px; border-radius: 20px; margin-bottom: 20px; position: relative; background: linear-gradient(135deg, #4caf50, #2e7d32); }
+      .bg-sun { background: linear-gradient(135deg, #ff4d4d, #c62828) !important; } 
+      .bg-mon { background: linear-gradient(135deg, #ff9800, #ef6c00) !important; } 
+      .bg-tue { background: linear-gradient(135deg, #fdd835, #f9a825) !important; } 
+      .bg-wed { background: linear-gradient(135deg, #4caf50, #2e7d32) !important; } 
+      .bg-thu { background: linear-gradient(135deg, #2196f3, #1565c0) !important; } 
+      .bg-fri { background: linear-gradient(135deg, #3f51b5, #283593) !important; } 
+      .bg-sat { background: linear-gradient(135deg, #9c27b0, #6a1b9a) !important; } 
+      
+      .privacy-toggle { position: absolute; top: 10px; right: 15px; cursor: pointer; z-index: 5; padding: 6px; }
+      .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .menu-item { 
+        background: white; 
+        padding: 18px; 
+        border-radius: 15px; 
+        text-align: center; 
+        cursor: pointer; 
+        border: 1px solid #eee; 
+        user-select: none; 
+        -webkit-user-select: none;
+        transition: transform 0.1s ease, background-color 0.1s ease;
+      }
+      .menu-item:active { 
+        background-color: #f5f5f5; 
+        transform: scale(0.97);
+      }
+      .menu-item i { font-size: 2rem; color: #444; display: block; margin-bottom: 5px; }
+      .back-btn { margin-bottom: 12px; color: #2e7d32; display: flex; align-items: center; cursor: pointer; font-weight: bold; font-size: 1rem; padding: 4px 0; }
+      
+      .cur-toggle { display: flex; gap: 6px; margin: 10px 0; }
+      .cur-toggle button { flex: 1; border: 1px solid #2e7d32; background: white; color: #2e7d32; border-radius: 8px; padding: 8px 4px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+      .cur-toggle button.active { background: #2e7d32 !important; color: white !important; }
+      
+      /* 自製穩定 Tab 按鈕（避免 Materialize JS 衝突） */
+      .custom-tabs { display: flex; background: white; border-radius: 10px; margin-bottom: 12px; height: 44px; border: 1px solid #e0e0e0; overflow: hidden; }
+      .custom-tab-btn { flex: 1; border: none; background: transparent; color: #666; font-weight: bold; font-size: 0.95rem; cursor: pointer; touch-action: manipulation; }
+      .custom-tab-btn.active { color: #2e7d32; border-bottom: 3px solid #2e7d32; background: #e8f5e9; }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+      
+      /* 🧧 農民曆與資產底部樣式 */
+      .lunar-footer { background: white; border-radius: 15px; padding: 15px; margin-top: 20px; font-size: 0.85rem; border: 1px solid #eee; color: #444; }
+      .lunar-tag { padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 5px; }
+      .tag-good { background: #e8f5e9; color: #2e7d32; }
+      .tag-bad { background: #ffebee; color: #c62828; }
+      
+      .secure-asset-box { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+      .secure-title { display: flex; align-items: flex-start; gap: 5px; color: #1565c0; font-weight: bold; font-size: 0.85rem; line-height: 1.6; overflow-wrap: anywhere; }
+      .secure-title i { font-size: 1.1rem; margin-right: 4px; }
+      .secure-val { font-weight: bold; color: #1565c0; font-size: 1.3rem; text-align: right; line-height: 1.4; overflow-wrap: anywhere; }
+      
+      .goal-asset-box { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; align-items: center; }
+      .goal-title { display: flex; align-items: center; color: #e65100; font-weight: bold; font-size: 0.85rem; }
+      .goal-title i { font-size: 1.1rem; margin-right: 4px; }
+      .goal-val { font-weight: bold; color: #e65100; font-size: 0.95rem; white-space: nowrap; }
+
+      .twd-preview { font-size: 0.85rem; color: #2e7d32; font-weight: bold; margin-top: -2px; margin-bottom: 8px; display: none; }
+      .hist-card { cursor: pointer; transition: background 0.2s, transform 0.1s; }
+      .hist-card:hover { background-color: #fafafa; }
+      .hist-card:active { transform: scale(0.99); background-color: #f0f0f0; }
+
+      /* 原生彈窗容器（防止 M.Modal 崩潰卡死） */
+      .app-modal { display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+      .app-modal.open { display: flex; align-items: center; justify-content: center; }
+      .app-modal-content { 
+        background: white; 
+        border-radius: 18px; 
+        width: 90%; 
+        max-width: 450px; 
+        max-height: 85vh; 
+        overflow-y: auto; 
+        padding: 20px; 
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25); 
+      }
+      .modal-sub-dialog { z-index: 1005 !important; }
+
+      /* 🧮 計算機 (支援 iPhone / Android 底部手勢條安全距離) */
+      #calc-container { 
+        display: none; 
+        background: #fff; 
+        position: fixed; 
+        bottom: 0; 
+        left: 0; 
+        width: 100%; 
+        z-index: 1001; 
+        padding: 10px 14px calc(14px + var(--safe-bottom)) 14px; 
+        border-top-left-radius: 20px; 
+        border-top-right-radius: 20px; 
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.2); 
+      }
+      .calc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+        padding: 0 4px;
+      }
+      .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .calc-btn { 
+        background: #f1f3f4; 
+        padding: 14px 0; 
+        text-align: center; 
+        border-radius: 10px; 
+        font-size: 1.3rem; 
+        font-weight: 500;
+        cursor: pointer; 
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        transition: background-color 0.1s;
+      }
+      .calc-btn:active { background-color: #dadce0; }
+      .calc-done { 
+        background: #2e7d32; 
+        color: white; 
+        grid-column: span 2; 
+        font-weight: bold; 
+        text-align: center; 
+        padding: 14px 0; 
+        border-radius: 10px; 
+        font-size: 1.1rem;
+        cursor: pointer; 
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        transition: opacity 0.1s;
+      }
+      .calc-done:active { opacity: 0.85; }
+
+      /* 表單輸入框：字體設為 16px 防止 iOS Safari 點擊時畫面被強制放大 */
+      select.browser-default { 
+        border: 1px solid #c8e6c9; 
+        border-radius: 8px; 
+        height: 42px; 
+        margin-bottom: 10px; 
+        width: 100%; 
+        background: #fff; 
+        font-size: 16px !important; 
+        padding: 0 8px;
+      }
+      input { 
+        height: 2.8rem !important; 
+        margin-bottom: 10px !important; 
+        border: 1px solid #ddd !important; 
+        border-radius: 8px !important; 
+        padding-left: 12px !important; 
+        font-size: 16px !important; 
+        box-sizing: border-box;
+      }
+      input:focus {
+        border-color: #2e7d32 !important;
+        outline: none;
+      }
+      .btn-main { width: 100%; border-radius: 25px; background: #2e7d32 !important; height: 48px; font-size: 1rem; font-weight: bold; color: white; border: none; cursor: pointer; touch-action: manipulation; }
+      .btn-main:disabled, button:disabled { opacity: 0.6 !important; cursor: not-allowed !important; pointer-events: none; }
+      *, *::before, *::after { box-sizing: border-box; }
+      #home-total { font-size: clamp(1.7rem, 7vw, 2.8rem); overflow-wrap: anywhere; }
+
+      /* 🍞 頂部優雅浮動通知 (Toast) */
+      #toast-notice {
+        position: fixed;
+        top: calc(16px + var(--safe-top));
+        left: 50%;
+        transform: translateX(-50%) translateY(-80px);
+        background: #333;
+        color: white;
+        padding: 10px 22px;
+        border-radius: 30px;
+        font-size: 0.95rem;
+        font-weight: bold;
+        z-index: 2000;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+        transition: transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.25s ease;
+        opacity: 0;
+        pointer-events: none;
+        text-align: center;
+        max-width: 90%;
+        white-space: nowrap;
+      }
+      #toast-notice.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+      #toast-notice.toast-error {
+        background: #d32f2f !important;
+      }
+      #toast-notice.toast-success {
+        background: #2e7d32 !important;
+      }
+
+      /* 🧪 GitHub Pages 線上試用版專屬外框與頂部提示列 */
+      html { background-color: #dde5ed; }
+      body {
+        max-width: 480px;
+        margin: 0 auto;
+        min-height: 100vh;
+        box-shadow: 0 0 30px rgba(0,0,0,0.12);
+      }
+      .demo-banner {
+        background: linear-gradient(90deg, #1e3c72, #2a5298);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        font-size: 0.8rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      }
+      .demo-banner button {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.4);
+        color: #fff;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        font-weight: bold;
+        white-space: nowrap;
+      }
+      .demo-banner button:active { background: rgba(255,255,255,0.35); }
+
+    </style>
+  </head>
+  <body>
+
+    <!-- 🍞 浮動通知容器 -->
+    <div id="toast-notice"></div>
+
+    <!-- 🏠 1. 首頁 -->
+    <div id="view-home" class="view active">
+      <div class="demo-banner">
+        <span>🧪 <b>互動試用版</b>（資料僅暫存於瀏覽器，歡迎隨意測試！）</span>
+        <button onclick="resetDemoData()">🔄 重置資料</button>
+      </div>
+      <div id="main-header" class="home-header center">
+        <div class="privacy-toggle" onclick="togglePrivacy()"><i id="privacy-icon" class="material-icons">visibility</i></div>
+        <small style="opacity:0.8">現金總資產</small>
+        <h4 id="home-total">******</h4>
+        <div style="display:flex; justify-content:space-around; margin-top:15px; font-size:0.85rem;">
+          <div>🍱 今日一般剩餘<br><b id="h-gen">******</b></div>
+          <div>🎁 特支本月剩餘<br><b id="h-spe">******</b></div>
+        </div>
+      </div>
+      
+      <div class="menu-grid">
+        <div class="menu-item" onclick="switchView('view-record')"><i class="material-icons">add_circle</i><b>我要記帳</b></div>
+        <div class="menu-item" onclick="openHistory()"><i class="material-icons">history</i><b>歷史紀錄</b></div>
+        <div class="menu-item" onclick="openBal()"><i class="material-icons">account_balance_wallet</i><b>資產明細</b></div>
+        <div class="menu-item" onclick="refreshHome()"><i class="material-icons">refresh</i><b>重新整理</b></div>
+      </div>
+
+      <div class="lunar-footer" data-version="wan-v4">
+        <div id="live-time" style="font-weight:bold; color:#333; margin-bottom:8px;">時間載入中...</div>
+        <div id="lunar-info" style="color:#d32f2f; font-weight:bold;">📅 宜記帳，忌浪費</div>
+        <div id="lunar-detail" style="margin-top: 5px;"></div>
+        <div style="font-size:11px;color:#888;margin-top:6px;">顯示版本：萬單位 v4 — 07:25</div>
+        
+        <div class="secure-asset-box">
+          <span class="secure-title"><i class="material-icons">shield</i><span id="secure-title-text">保底總資產 (預扣專款基金)</span></span>
+          <span id="secure-total-val" class="secure-val">******</span>
+        </div>
+
+        <div class="goal-asset-box">
+          <span class="goal-title"><i class="material-icons">track_changes</i>當月保底存錢目標</span>
+          <span id="savings-goal-val" class="goal-val">******</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 💸 2. 記帳頁 -->
+    <div id="view-record" class="view">
+      <div class="back-btn" onclick="switchView('view-home')"><i class="material-icons">chevron_left</i>返回</div>
+      
+      <div class="custom-tabs">
+        <button class="custom-tab-btn active" onclick="switchTab('exp', this)">支出</button>
+        <button class="custom-tab-btn" onclick="switchTab('inc', this)">收入</button>
+        <button class="custom-tab-btn" onclick="switchTab('tra', this)">轉帳</button>
+      </div>
+
+      <div id="tab-exp" class="tab-panel active card-panel white">
+        <div class="cur-toggle">
+          <button id="exp-twd" class="active" onclick="setCur('exp','TWD')">🇹🇼 TWD</button>
+          <button id="exp-usd" onclick="setCur('exp','USD')">🇺🇸 USD</button>
+          <button id="exp-jpy" onclick="setCur('exp','JPY')">🇯🇵 JPY</button>
+        </div>
+        <input type="date" id="date" class="browser-default">
+        
+        <select id="cat" class="browser-default" onchange="sync()"></select>
+        <select id="sub" class="browser-default"></select>
+        <select id="acc" class="browser-default acc-list"></select>
+        
+        <input type="text" id="amt" placeholder="金額 (點此輸入)" readonly onclick="openCalc('amt')">
+        <div id="exp-twd-preview" class="twd-preview">✨ 折合台幣約：NT$ <span id="exp-calc-val">0</span></div>
+
+        <input type="text" id="note" placeholder="備註...">
+        <button id="btn-save-exp" class="btn-main" onclick="saveExp()">儲存支出</button>
+      </div>
+
+      <div id="tab-inc" class="tab-panel card-panel white">
+        <div class="cur-toggle">
+          <button id="inc-twd" class="active" onclick="setCur('inc','TWD')">🇹🇼 TWD</button>
+          <button id="inc-usd" onclick="setCur('inc','USD')">🇺🇸 USD</button>
+          <button id="inc-jpy" onclick="setCur('inc','JPY')">🇯🇵 JPY</button>
+        </div>
+        <input type="date" id="i-date" class="browser-default">
+        <input type="text" id="i-src" placeholder="來源 (例如：薪水、投資收益)">
+        <select id="i-acc" class="browser-default acc-list"></select>
+        <input type="text" id="i-amt" placeholder="金額 (點此輸入)" readonly onclick="openCalc('i-amt')">
+        <div id="inc-twd-preview" class="twd-preview">✨ 折合台幣約：NT$ <span id="inc-calc-val">0</span></div>
+
+        <button id="btn-save-inc" class="btn-main" style="background:#fb8c00 !important;" onclick="saveInc()">儲存收入</button>
+      </div>
+
+      <div id="tab-tra" class="tab-panel card-panel white">
+        <div class="cur-toggle">
+          <button id="tra-twd" class="active" onclick="setCur('tra','TWD')">🇹🇼 TWD</button>
+          <button id="tra-usd" onclick="setCur('tra','USD')">🇺🇸 USD</button>
+          <button id="tra-jpy" onclick="setCur('tra','JPY')">🇯🇵 JPY</button>
+        </div>
+        <input type="date" id="t-date" class="browser-default">
+        <label style="font-size:0.8rem; color:#666;">轉出帳戶</label>
+        <select id="t-f" class="browser-default acc-list"></select>
+        <div class="center" style="font-size:0.75rem; color:#888; margin: 4px 0;">⬇️ 轉帳至 ⬇️</div>
+        <label style="font-size:0.8rem; color:#666;">轉入帳戶</label>
+        <select id="t-t" class="browser-default acc-list"></select>
+        <input type="text" id="t-amt" placeholder="金額 (點此輸入)" readonly onclick="openCalc('t-amt')">
+        <div id="tra-twd-preview" class="twd-preview">✨ 折合台幣約：NT$ <span id="tra-calc-val">0</span></div>
+
+        <button id="btn-save-tra" class="btn-main" style="background:#1e88e5 !important;" onclick="saveTra()">執行轉帳</button>
+      </div>
+    </div>
+
+    <!-- 📜 3. 歷史紀錄 -->
+    <div id="view-history" class="view">
+      <div class="back-btn" onclick="switchView('view-home')"><i class="material-icons">chevron_left</i>返回</div>
+      <div class="card-panel white">
+        <input type="month" id="hist-month" class="browser-default" onchange="loadHistory()">
+        <div style="font-size: 0.75rem; color: #888; margin-bottom: 8px;">💡 提示：點擊紀錄卡片可修改或刪除</div>
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+    <!-- 🏦 帳戶明細彈窗 -->
+    <div id="modal-bal" class="app-modal">
+      <div class="app-modal-content">
+        <h6>🏦 帳戶明細 (點選金額校準)</h6>
+        <table class="striped"><tbody id="bal-body"></tbody></table>
+        <div style="text-align:right; margin-top:15px;">
+          <button class="btn-flat" onclick="closeModal('modal-bal')">關閉</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⚖️ 帳戶餘額校準彈窗 (取代瀏覽器 prompt) -->
+    <div id="modal-adjust" class="app-modal modal-sub-dialog">
+      <div class="app-modal-content" style="max-width: 380px;">
+        <h6 style="font-weight: bold; color: #2e7d32; margin-bottom: 12px;">⚖️ 校準帳戶餘額</h6>
+        <div id="adjust-desc" style="font-size: 0.9rem; color: #444; margin-bottom: 12px; line-height: 1.6;"></div>
+        
+        <label style="font-size: 0.8rem; color: #666;">真實餘額</label>
+        <input type="number" id="adjust-val-input" placeholder="請輸入真實金額" class="browser-default" step="any">
+        
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top: 15px;">
+          <button class="btn-flat" onclick="closeModal('modal-adjust')">取消</button>
+          <button id="btn-confirm-adjust" class="btn green darken-2" onclick="confirmAdjustAcc()" style="border-radius:8px; border:none; color:white; padding:0 16px;">確認校準</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📝 歷史紀錄編輯彈窗 -->
+    <div id="modal-edit" class="app-modal">
+      <div class="app-modal-content">
+        <h6 style="font-weight: bold; margin-bottom: 15px; color: #2e7d32;">✏️ 編輯明細紀錄</h6>
+        <input type="hidden" id="edit-row">
+        
+        <label style="font-size:0.8rem; color:#666;">日期</label>
+        <input type="date" id="edit-date" class="browser-default">
+        
+        <label style="font-size:0.8rem; color:#666;">項目名稱</label>
+        <input type="text" id="edit-item" placeholder="項目名稱">
+        
+        <label style="font-size:0.8rem; color:#666;">金額</label>
+        <input type="number" id="edit-amt" placeholder="金額">
+        
+        <label style="font-size:0.8rem; color:#666;">帳戶</label>
+        <select id="edit-acc" class="browser-default acc-list"></select>
+        
+        <label style="font-size:0.8rem; color:#666;">備註</label>
+        <input type="text" id="edit-note" placeholder="備註...">
+
+        <div style="display:flex; justify-content:space-between; margin-top: 15px;">
+          <button id="btn-del-edit" class="btn red lighten-1" onclick="deleteHistoryItem()" style="border-radius:8px; border:none; color:white; padding:8px 16px;">刪除</button>
+          <div>
+            <button class="btn-flat" onclick="closeModal('modal-edit')" style="margin-right:5px;">取消</button>
+            <button id="btn-save-edit" class="btn green darken-2" onclick="saveHistoryItem()" style="border-radius:8px; border:none; color:white; padding:8px 16px;">儲存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🗑️ 確認刪除彈窗 (取代瀏覽器 confirm) -->
+    <div id="modal-confirm-del" class="app-modal modal-sub-dialog">
+      <div class="app-modal-content" style="max-width: 360px;">
+        <h6 style="font-weight: bold; color: #c62828; margin-bottom: 10px;">🗑️ 確定要刪除這筆紀錄？</h6>
+        <p style="font-size: 0.85rem; color: #666; margin: 0 0 15px 0; line-height: 1.5;">
+          刪除後將直接從試算表流水帳中移除，此動作無法復原。
+        </p>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn-flat" onclick="closeModal('modal-confirm-del')">取消</button>
+          <button id="btn-del-confirm" class="btn red lighten-1" onclick="executeDeleteHistoryItem()" style="border-radius:8px; border:none; color:white; padding:0 16px;">確認刪除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🧮 計算機 (含頂部收起控制列) -->
+    <div id="calc-container">
+      <div class="calc-header">
+        <span style="font-weight: bold; color: #555; font-size: 0.9rem;">🧮 數字鍵盤</span>
+        <button style="background: none; border: none; color: #666; font-size: 0.9rem; font-weight: bold; cursor: pointer; padding: 4px 8px; display: flex; align-items: center;" onclick="hideCalc()">
+          收起 <i class="material-icons" style="font-size: 1.2rem; margin-left: 2px;">keyboard_arrow_down</i>
+        </button>
+      </div>
+      <div id="calc-display" style="text-align:right; font-size:1.8rem; padding:10px; background:#f5f5f5; border-radius:10px; margin-bottom:10px; color: #2e7d32;">0</div>
+      <div class="calc-grid">
+        <div class="calc-btn" onclick="press('7')">7</div><div class="calc-btn" onclick="press('8')">8</div><div class="calc-btn" onclick="press('9')">9</div><div class="calc-btn calc-op" onclick="press('/')">÷</div>
+        <div class="calc-btn" onclick="press('4')">4</div><div class="calc-btn" onclick="press('5')">5</div><div class="calc-btn" onclick="press('6')">6</div><div class="calc-btn calc-op" onclick="press('*')">×</div>
+        <div class="calc-btn" onclick="press('1')">1</div><div class="calc-btn" onclick="press('2')">2</div><div class="calc-btn" onclick="press('3')">3</div><div class="calc-btn calc-op" onclick="press('-')">-</div>
+        <div class="calc-btn" onclick="press('0')">0</div><div class="calc-btn" onclick="press('.')">.</div><div class="calc-btn calc-op" onclick="press('C')">C</div><div class="calc-btn calc-op" onclick="press('+')">+</div>
+        <div class="calc-done" onclick="closeCalc()">帶入</div><div class="calc-done" style="background:#666" onclick="evalCalc()">＝</div>
+      </div>
+    </div>
+
+    <script>
+      /**
+       * 🧪 GitHub Pages 離線/線上互動試用引擎 (Mock google.script.run)
+       * 當偵測到不在 Google Apps Script 環境時自動啟用，完整模擬 7 大工作表公式連動！
+       */
+      if (typeof google === 'undefined' || !google.script) {
+        const STORAGE_KEY = 'gs_budget_app_demo_v1';
+
+        function getTodayParts() {
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, '0');
+          const d = String(now.getDate()).padStart(2, '0');
+          return { y, m, d, todayStr: `${y}/${m}/${d}`, monthStr: `${y}/${m}` };
+        }
+
+        function createDefaultState() {
+          const { y, m, d, todayStr } = getTodayParts();
+          const d1 = `${y}/${m}/01`;
+          const d5 = `${y}/${m}/05`;
+          return {
+            rates: { TWD: 1, USD: 32.5, JPY: 0.21 },
+            monthlyGeneralBudget: 15000,
+            monthlySpecialBudget: 10000,
+            secureLabel: '保底總資產 (預扣專款基金)',
+            savingsGoal: '73.5 萬',
+            categories: {
+              '一般花費': ['早餐', '午餐', '晚餐', '飲料', '咖啡', '水果', '零食', '交通', '醫療', '日用品', '房租', '運動健身', '電信費', '影音串流訂閱', '書籍/雜誌'],
+              '特支費': ['大餐', '禮物', '購物', '旅遊', '娛樂', '學習', '3C產品', '其他特支', '服飾鞋包', '電影/展覽', '國內旅遊', '國外旅遊'],
+              '代墊費': ['代墊公司費用', '代墊其他'],
+              '✈️出國旅遊專案': ['早餐', '午餐', '晚餐', '交通', '購物', '國外旅遊']
+            },
+            accounts: [
+              { name: '👛錢包', currency: 'TWD', init: 3000 },
+              { name: '🎫悠遊卡 / ICOCA', currency: 'TWD', init: 1000 },
+              { name: '街口帳戶', currency: 'TWD', init: 500 },
+              { name: '🏦玉山生活', currency: 'TWD', init: 50000 },
+              { name: '🏦國泰新生活', currency: 'TWD', init: 30000 },
+              { name: '🏦富邦數位帳戶', currency: 'TWD', init: 20000 },
+              { name: '🏦郵局', currency: 'TWD', init: 15000 },
+              { name: '💳國泰cube', currency: 'TWD', init: 0 },
+              { name: '💳富邦J卡', currency: 'TWD', init: 0 },
+              { name: '🏦台灣銀行 (進修基金)', currency: 'TWD', init: 50000 },
+              { name: '✈️專款基金 (出國旅遊)', currency: 'TWD', init: 30000, isDeducted: true },
+              { name: '🏦國泰台股交割戶', currency: 'TWD', init: 20000 },
+              { name: '📈台股已投入成本', currency: 'TWD', init: 250000 },
+              { name: 'Line Bank 美金', currency: 'USD', init: 500 },
+              { name: 'Firstrade 交割戶', currency: 'USD', init: 1000 },
+              { name: '美股投入成本', currency: 'USD', init: 3500 }
+            ],
+            transactions: [
+              { id: 2, date: d1, category: '收入', type: '收入', item: '本月薪資 (示範)', twdAmt: 0, account: '🏦玉山生活', note: 'TWD 收入', origAmt: 45000 },
+              { id: 3, date: d1, category: '一般花費', type: '支出', item: '電信費', twdAmt: 600, account: '🏦郵局', note: '(自動) 示範固定扣款', origAmt: 600 },
+              { id: 4, date: d5, category: '轉帳', type: '支出', item: '轉出至 👛錢包', twdAmt: 0, account: '🏦玉山生活', note: 'TWD 轉帳', origAmt: 2000 },
+              { id: 5, date: d5, category: '轉帳', type: '收入', item: '來自 🏦玉山生活 轉入', twdAmt: 0, account: '👛錢包', note: 'TWD 轉帳', origAmt: 2000 },
+              { id: 6, date: todayStr, category: '一般花費', type: '支出', item: '午餐', twdAmt: 150, account: '👛錢包', note: '示範今日一般支出', origAmt: 150 },
+              { id: 7, date: todayStr, category: '特支費', type: '支出', item: '書籍/雜誌', twdAmt: 450, account: '💳富邦J卡', note: '示範特支消費', origAmt: 450 }
+            ],
+            nextId: 8
+          };
+        }
+
+        function loadState() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+          } catch (e) {}
+          const def = createDefaultState();
+          saveState(def);
+          return def;
+        }
+
+        function saveState(state) {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        }
+
+        window.resetDemoData = function() {
+          const def = createDefaultState();
+          saveState(def);
+          if (typeof st === 'function') st('🔄 已重置為預設示範資料！');
+          if (typeof refreshHome === 'function') refreshHome();
+        };
+
+        function computeSummary(state) {
+          const { y, m, d, todayStr, monthStr } = getTodayParts();
+          const daysInMonth = new Date(Number(y), Number(m), 0).getDate();
+          const remainingDays = Math.max(1, daysInMonth - Number(d) + 1);
+
+          // 計算各帳戶餘額
+          const detail = state.accounts.map(acc => {
+            let bal = acc.init;
+            state.transactions.forEach(tx => {
+              if (tx.account === acc.name) {
+                if (tx.type === '收入') bal += Number(tx.origAmt) || 0;
+                if (tx.type === '支出') bal -= Number(tx.origAmt) || 0;
+              }
+            });
+            return { name: acc.name, currency: acc.currency, current: bal, isDeducted: !!acc.isDeducted };
+          });
+
+          let twdTotal = 0, usdTotal = 0, deductedAmt = 0;
+          detail.forEach(a => {
+            if (a.currency === 'USD') usdTotal += a.current;
+            else twdTotal += a.current;
+            if (a.isDeducted) deductedAmt += a.current;
+          });
+          const usdToTwd = usdTotal * state.rates.USD;
+          const cashTotal = twdTotal + usdToTwd;
+          const secureTotal = cashTotal - deductedAmt;
+
+          // 計算本月一般與特支預算
+          let monthGenSpentBeforeToday = 0;
+          let todayGenSpent = 0;
+          let monthSpeSpent = 0;
+          state.transactions.forEach(tx => {
+            if (tx.type === '支出' && tx.date.startsWith(monthStr)) {
+              if (tx.category === '一般花費') {
+                if (tx.date === todayStr) todayGenSpent += Number(tx.twdAmt) || 0;
+                else monthGenSpentBeforeToday += Number(tx.twdAmt) || 0;
+              } else if (tx.category === '特支費') {
+                monthSpeSpent += Number(tx.twdAmt) || 0;
+              }
+            }
+          });
+
+          const startOfDayGenRemaining = state.monthlyGeneralBudget - monthGenSpentBeforeToday;
+          const dailyGenQuota = Math.max(0, Math.round(startOfDayGenRemaining / remainingDays));
+          const todayGenRemaining = dailyGenQuota - todayGenSpent;
+          const monthSpeRemaining = state.monthlySpecialBudget - monthSpeSpent;
+
+          return {
+            detail,
+            twdTotal,
+            usdTotal,
+            usdToTwd,
+            cashTotal,
+            secureTotal,
+            todayGenRemaining,
+            monthSpeRemaining
+          };
+        }
+
+        const mockBackend = {
+          getCategoryMapping() {
+            return loadState().categories;
+          },
+          getInitData() {
+            const state = loadState();
+            const sum = computeSummary(state);
+            return {
+              budget: { general: sum.todayGenRemaining, special: sum.monthSpeRemaining },
+              rates: state.rates,
+              accounts: state.accounts.map(a => a.name)
+            };
+          },
+          getFullAccountBalances() {
+            const state = loadState();
+            const sum = computeSummary(state);
+            return {
+              detail: sum.detail.map(d => ({ name: d.name, current: d.current })),
+              secureLabel: state.secureLabel,
+              secureTotal: sum.secureTotal,
+              savingsGoal: state.savingsGoal,
+              summary: [
+                { label: '台幣總資產', value: sum.twdTotal },
+                { label: '美金總資產', value: sum.usdTotal, subValue: sum.usdToTwd },
+                { label: '現金總資產', value: sum.cashTotal }
+              ]
+            };
+          },
+          saveTransaction(data) {
+            const state = loadState();
+            const amt = parseFloat(data.amount);
+            const rate = state.rates[data.currency] || 1;
+            state.transactions.push({
+              id: state.nextId++,
+              date: data.date,
+              category: data.category,
+              type: '支出',
+              item: data.subItem,
+              twdAmt: amt * rate,
+              account: data.account,
+              note: data.note || '',
+              origAmt: amt
+            });
+            saveState(state);
+            return '✨ 紀錄成功！(試用模式)';
+          },
+          saveIncome(data) {
+            const state = loadState();
+            const amt = parseFloat(data.amount);
+            const cur = data.currency || 'TWD';
+            const rate = state.rates[cur] || 1;
+            const note = cur === 'TWD' ? 'TWD 收入' : `${cur} 收入 (折合台幣約 NT$${Math.round(amt * rate)})`;
+            state.transactions.push({
+              id: state.nextId++,
+              date: data.date,
+              category: '收入',
+              type: '收入',
+              item: data.source,
+              twdAmt: 0,
+              account: data.account,
+              note: note,
+              origAmt: amt
+            });
+            saveState(state);
+            return '🎊 收入已入帳！(試用模式)';
+          },
+          saveTransfer(data) {
+            const state = loadState();
+            const amt = parseFloat(data.amount);
+            const cur = data.currency || 'TWD';
+            const rate = state.rates[cur] || 1;
+            const note = cur === 'TWD' ? 'TWD 轉帳' : `${cur} 轉帳 (折合台幣約 NT$${Math.round(amt * rate)})`;
+            state.transactions.push(
+              {
+                id: state.nextId++,
+                date: data.date,
+                category: '轉帳',
+                type: '支出',
+                item: '轉出至 ' + data.toAccount,
+                twdAmt: 0,
+                account: data.fromAccount,
+                note: note,
+                origAmt: amt
+              },
+              {
+                id: state.nextId++,
+                date: data.date,
+                category: '轉帳',
+                type: '收入',
+                item: '來自 ' + data.fromAccount + ' 轉入',
+                twdAmt: 0,
+                account: data.toAccount,
+                note: note,
+                origAmt: amt
+              }
+            );
+            saveState(state);
+            return '✅ 轉帳成功！(試用模式)';
+          },
+          processAdjustment(name, diff, finalVal) {
+            const state = loadState();
+            diff = parseFloat(diff);
+            finalVal = parseFloat(finalVal);
+            state.transactions.push({
+              id: state.nextId++,
+              date: getTodayParts().todayStr,
+              category: '餘額校準',
+              type: diff >= 0 ? '收入' : '支出',
+              item: '手動校準誤差',
+              twdAmt: 0,
+              account: name,
+              note: '校準至 ' + finalVal,
+              origAmt: Math.abs(diff)
+            });
+            saveState(state);
+            return '✅ 【' + name + '】已校準！(試用模式)';
+          },
+          getHistoryByDate(targetString) {
+            const state = loadState();
+            const target = String(targetString).replace(/-/g, '/');
+            return state.transactions
+              .filter(tx => tx.date.startsWith(target))
+              .map(tx => ({
+                rowIndex: tx.id,
+                date: tx.date,
+                category: tx.category,
+                type: tx.type,
+                item: tx.item,
+                amount: tx.twdAmt !== 0 ? tx.twdAmt : tx.origAmt,
+                account: tx.account,
+                note: tx.note
+              }))
+              .sort((a, b) => b.date.localeCompare(a.date) || b.rowIndex - a.rowIndex);
+          },
+          updateTransaction(data) {
+            const state = loadState();
+            const tx = state.transactions.find(t => String(t.id) === String(data.rowIndex));
+            if (!tx) throw new Error('找不到該筆紀錄');
+            const amt = parseFloat(data.amount);
+            const ratio = tx.origAmt ? tx.twdAmt / tx.origAmt : 1;
+            tx.date = data.date;
+            tx.item = data.item;
+            tx.twdAmt = tx.twdAmt === 0 ? 0 : amt;
+            tx.account = data.account;
+            tx.note = data.note;
+            tx.origAmt = tx.twdAmt === 0 ? amt : (ratio ? amt / ratio : amt);
+            saveState(state);
+            return '✅ 紀錄已成功更新！(試用模式)';
+          },
+          deleteTransaction(rowIndex) {
+            const state = loadState();
+            const idx = state.transactions.findIndex(t => String(t.id) === String(rowIndex));
+            if (idx === -1) throw new Error('找不到該筆紀錄');
+            state.transactions.splice(idx, 1);
+            saveState(state);
+            return '🗑️ 紀錄已成功刪除！(試用模式)';
+          }
+        };
+
+        function createRunner(successHandler, failureHandler) {
+          const runner = {
+            withSuccessHandler(fn) { return createRunner(fn, failureHandler); },
+            withFailureHandler(fn) { return createRunner(successHandler, fn); }
+          };
+          Object.keys(mockBackend).forEach(method => {
+            runner[method] = function(...args) {
+              setTimeout(() => {
+                try {
+                  const res = mockBackend[method](...args);
+                  if (successHandler) successHandler(res);
+                } catch (err) {
+                  if (failureHandler) failureHandler(err);
+                }
+              }, 180);
+            };
+          });
+          return runner;
+        }
+
+        window.google = {
+          script: {
+            get run() { return createRunner(null, null); }
+          }
+        };
+      }
+    </script>
+    <script>
+      let isPrivate = false, isLoading = false;
+      let rawData = { total: 0, gen: 0, spe: 0, secureLabel: "保底總資產 (預扣專款基金)", secureTotal: 0, savingsGoal: "******" };
+      let curs = { exp: 'TWD', inc: 'TWD', tra: 'TWD' };
+      let rates = { USD: 30, JPY: 0.21 };
+      let map = {}, tid = '', cval = '0';
+      let currentHistoryData = [];
+      let adjustTarget = { name: '', curr: 0 };
+      let toastTimer = null;
+      const emojis = {"早餐":"🍳","午餐":"🍱","晚餐":"🍜","飲料":"🥤","水果":"🍎","零食":"🍪","交通":"🚗","醫療":"🏥","貓貓":"🐱","房租":"🏠","大餐":"🥩","禮物":"🎁","購物":"🛍️","旅遊":"✈️","娛樂":"🎮","學習":"📚","3C產品":"💻"};
+      
+      function vib(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
+
+      /* 🍞 優化版通知訊息：於螢幕頂部彈出美觀浮動標籤 */
+      function st(msg, isError = false) {
+        const toast = document.getElementById('toast-notice');
+        if (!toast) return;
+        toast.innerText = msg;
+        toast.className = isError ? 'show toast-error' : 'show toast-success';
+        if (isError) vib([40, 40, 40]);
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.className = '';
+        }, 3200);
+      }
+
+      /* 隱藏/收起計算機 */
+      function hideCalc() {
+        const c = document.getElementById('calc-container');
+        if (c) c.style.display = 'none';
+      }
+
+      /* 按鈕 Loading 狀態控制工具 */
+      function setBtnLoading(btnId, loading, loadingText, defaultText) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (loading) {
+          btn.disabled = true;
+          if (!btn.dataset.originalText) btn.dataset.originalText = btn.innerText;
+          btn.innerText = loadingText || '⏳ 處理中...';
+        } else {
+          btn.disabled = false;
+          btn.innerText = defaultText || btn.dataset.originalText || '儲存';
+        }
+      }
+
+      /* 發生錯誤或重設時解鎖所有按鈕 */
+      function resetAllButtons() {
+        setBtnLoading('btn-save-exp', false, '', '儲存支出');
+        setBtnLoading('btn-save-inc', false, '', '儲存收入');
+        setBtnLoading('btn-save-tra', false, '', '執行轉帳');
+        setBtnLoading('btn-save-edit', false, '', '儲存');
+        setBtnLoading('btn-del-edit', false, '', '刪除');
+        setBtnLoading('btn-confirm-adjust', false, '', '確認校準');
+        setBtnLoading('btn-del-confirm', false, '', '確認刪除');
+      }
+
+      // 🌟 核心分頁切換邏輯 (切換分頁時自動收起計算機)
+      function switchView(id) { 
+        hideCalc(); // 💡 離開頁面或返回首頁時，強制關閉計算機！
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); 
+        const target = document.getElementById(id);
+        if (target) target.classList.add('active'); 
+        if (id === 'view-home') refreshHome(); 
+      }
+
+      function switchTab(tabId, button) {
+        hideCalc(); // 切換支出/收入/轉帳時也自動收起
+        document.querySelectorAll('.custom-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        
+        if (button) button.classList.add('active');
+        const p = document.getElementById('tab-' + tabId);
+        if (p) p.classList.add('active');
+      }
+
+      function openModal(id) {
+        hideCalc();
+        const el = document.getElementById(id);
+        if (el) el.classList.add('open');
+      }
+
+      function closeModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('open');
+      }
+
+      // 顯示 Apps Script 後端錯誤
+      function gasError(error) {
+        isLoading = false;
+        resetAllButtons();
+        const message = error && error.message ? error.message : String(error || '未知錯誤');
+        console.error('Apps Script 錯誤：', error);
+        st('❌ 執行失敗：' + message, true);
+      }
+
+      // 初始化腳本
+      window.onload = function() {
+        try {
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, '0');
+          const d = String(now.getDate()).padStart(2, '0');
+          const todayStr = `${y}-${m}-${d}`;
+          const monthStr = `${y}-${m}`;
+
+          ['date','i-date','t-date','edit-date'].forEach(id => { 
+            const el = document.getElementById(id);
+            if (el) el.value = todayStr; 
+          });
+          const histM = document.getElementById('hist-month');
+          if (histM) histM.value = monthStr;
+        } catch(e) { console.warn(e); }
+
+        initStyleAndClock();
+
+        try {
+          google.script.run.withSuccessHandler(r => { 
+            map = r || {}; 
+            const s = document.getElementById('cat'); 
+            if(s) {
+              s.innerHTML = ''; 
+              Object.keys(map).forEach(c => { 
+                let o = document.createElement('option'); 
+                o.value = o.text = c; 
+                s.appendChild(o); 
+              }); 
+              s.value = "一般花費"; 
+              sync(); 
+            }
+          }).withFailureHandler(gasError).getCategoryMapping();
+        } catch(e) { console.warn(e); }
+
+        refreshHome();
+      };
+
+      function initStyleAndClock() {
+        const colors = ['bg-sun', 'bg-mon', 'bg-tue', 'bg-wed', 'bg-thu', 'bg-fri', 'bg-sat'];
+        const h = document.getElementById('main-header');
+        const day = new Date().getDay();
+        if(h) {
+          h.classList.remove(...colors);
+          h.classList.add(colors[day]);
+        }
+
+        const updateClock = () => {
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, '0');
+          const d = String(now.getDate()).padStart(2, '0');
+          const w = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][now.getDay()];
+          const hh = String(now.getHours()).padStart(2, '0');
+          const mm = String(now.getMinutes()).padStart(2, '0');
+          const ss = String(now.getSeconds()).padStart(2, '0');
+          
+          const timeEl = document.getElementById('live-time');
+          if (timeEl) timeEl.innerText = `${y}年${m}月${d}日 ${w} ${hh}:${mm}:${ss}`;
+        };
+        updateClock();
+        setInterval(updateClock, 1000);
+        
+        try {
+          fetch('https://www.iamghost.com/api/lunar/')
+            .then(res => res.json())
+            .then(data => {
+              if (!data || !data.lunar) return;
+              const l = data.lunar;
+              const iEl = document.getElementById('lunar-info');
+              const dEl = document.getElementById('lunar-detail');
+              if (iEl) iEl.innerHTML = `📅 農曆 ${l.month}月${l.day} · <span style="color:#d32f2f">${l.solarTerm || '無節氣'}</span>`;
+              if (dEl) dEl.innerHTML = `
+                <div><span class="lunar-tag tag-good">宜</span> ${l.fit.slice(0,4).join(' ')}</div>
+                <div style="margin-top:5px;"><span class="lunar-tag tag-bad">忌</span> ${l.avoid.slice(0,4).join(' ')}</div>
+              `;
+            }).catch(e => {});
+        } catch(e) {}
+      }
+
+      function togglePrivacy() { 
+        isPrivate = !isPrivate; 
+        document.getElementById('privacy-icon').innerText = isPrivate ? 'visibility_off' : 'visibility'; 
+        updateHomeDisplay(); 
+      }
+      
+      function updateHomeDisplay() {
+        const total = Number(rawData.total) || 0;
+        const gen = Number(rawData.gen) || 0;
+        const spe = Number(rawData.spe) || 0;
+        const secureTotal = Number(rawData.secureTotal) || 0;
+        
+        document.getElementById('home-total').innerText = isPrivate ? "******" : 'NT$ ' + Math.round(total).toLocaleString('zh-TW');
+        document.getElementById('h-gen').innerText = isPrivate ? "******" : '$ ' + Math.round(gen).toLocaleString('zh-TW');
+        document.getElementById('h-spe').innerText = isPrivate ? "******" : '$ ' + Math.round(spe).toLocaleString('zh-TW');
+        const titleEl = document.getElementById('secure-title-text');
+        if (titleEl && rawData.secureLabel) titleEl.innerText = rawData.secureLabel;
+        document.getElementById('secure-total-val').innerText = isPrivate ? "******" : (Math.trunc(secureTotal / 1000) / 10).toFixed(1) + '萬';
+        document.getElementById('savings-goal-val').innerText = isPrivate ? "******" : rawData.savingsGoal;
+      }
+      
+      function refreshHome() {
+        if (!isPrivate) document.getElementById('home-total').innerText = "讀取中...";
+        google.script.run.withSuccessHandler(d => {
+          if (!d) return;
+          if (d.budget) {
+            rawData.gen = d.budget.general || 0;
+            rawData.spe = d.budget.special || 0;
+          }
+          if (d.rates) rates = d.rates;
+          
+          if (d.accounts) {
+            document.querySelectorAll('.acc-list').forEach(s => { 
+              const curVal = s.value;
+              s.innerHTML = ''; 
+              d.accounts.forEach(a => { let o=document.createElement('option'); o.value=o.text=a; s.appendChild(o); }); 
+              if (curVal) s.value = curVal;
+            });
+          }
+          
+          google.script.run.withSuccessHandler(bal => { 
+            if (!bal) return;
+            const t = (bal.summary || []).find(s => s.label === "現金總資產"); 
+            rawData.total = t ? t.value : 0;
+            if (bal.secureLabel) rawData.secureLabel = bal.secureLabel;
+            rawData.secureTotal = bal.secureTotal || 0;
+            rawData.savingsGoal = bal.savingsGoal || "未設定";
+            updateHomeDisplay(); 
+          }).withFailureHandler(gasError).getFullAccountBalances();
+        }).withFailureHandler(gasError).getInitData();
+      }
+      
+      function sync() { 
+        const catEl = document.getElementById('cat');
+        if (!catEl) return;
+        const c = catEl.value, s = document.getElementById('sub'); 
+        if (!s) return;
+        s.innerHTML = ''; 
+        if(map[c]) {
+          map[c].forEach(i => { 
+            let o = document.createElement('option'); 
+            o.value = i; 
+            o.text = (emojis[i] || "🔹") + " " + i; 
+            s.appendChild(o); 
+          }); 
+        }
+      }
+
+      function press(k) { vib(15); if(k==='C') cval='0'; else if(cval==='0'&&!isNaN(k)) cval=k; else cval+=k; document.getElementById('calc-display').innerText=cval; }
+      function openCalc(id) { tid=id; cval='0'; document.getElementById('calc-display').innerText='0'; document.getElementById('calc-container').style.display='block'; }
+      function closeCalc() { 
+        if (tid && document.getElementById(tid)) {
+          document.getElementById(tid).value = cval; 
+          if (tid === 'amt') updateTwdPreview('exp');
+          if (tid === 'i-amt') updateTwdPreview('inc');
+          if (tid === 't-amt') updateTwdPreview('tra');
+        }
+        hideCalc();
+      }
+      function evalCalc() { try { cval=eval(cval).toString(); document.getElementById('calc-display').innerText=cval; } catch(e){ cval='Error'; } }
+
+      // 支援實體鍵盤與獨立數字鍵盤
+      document.addEventListener('keydown', function(e) {
+        const calc = document.getElementById('calc-container');
+        if (!calc || calc.style.display !== 'block') return;
+
+        let key = e.key;
+        if (e.code === 'NumpadDecimal') key = '.';
+
+        if (key.length === 1 && '0123456789'.includes(key)) {
+          e.preventDefault();
+          press(key);
+          return;
+        }
+
+        if (['+', '-', '*', '/'].includes(key)) {
+          e.preventDefault();
+          press(key);
+          return;
+        }
+
+        if (key === '.' || key === ',') {
+          e.preventDefault();
+          press('.');
+          return;
+        }
+
+        if (key === 'Backspace') {
+          e.preventDefault();
+          cval = cval.length > 1 ? cval.slice(0, -1) : '0';
+          document.getElementById('calc-display').innerText = cval;
+          return;
+        }
+
+        if (key === 'Delete') {
+          e.preventDefault();
+          press('C');
+          return;
+        }
+
+        if (key === 'Enter') {
+          e.preventDefault();
+          closeCalc();
+          return;
+        }
+
+        if (key === '=') {
+          e.preventDefault();
+          evalCalc();
+          return;
+        }
+
+        if (key === 'Escape') {
+          e.preventDefault();
+          hideCalc();
+        }
+      });
+      
+      function setCur(p, c) { 
+        curs[p] = c; 
+        ['twd','usd','jpy'].forEach(cur => {
+          const btn = document.getElementById(`${p}-${cur}`);
+          if (btn) btn.className = (cur === c.toLowerCase() ? 'active' : '');
+        });
+        updateTwdPreview(p);
+      }
+
+      function updateTwdPreview(p) {
+        const cur = curs[p];
+        const amtInputId = p === 'exp' ? 'amt' : (p === 'inc' ? 'i-amt' : 't-amt');
+        const amtVal = parseFloat(document.getElementById(amtInputId).value) || 0;
+        const previewEl = document.getElementById(p + '-twd-preview');
+        const calcValEl = document.getElementById(p + '-calc-val');
+
+        if (cur !== 'TWD' && amtVal > 0 && rates[cur]) {
+          calcValEl.innerText = Math.round(amtVal * rates[cur]).toLocaleString('zh-TW');
+          previewEl.style.display = 'block';
+        } else {
+          previewEl.style.display = 'none';
+        }
+      }
+      
+      function openBal() {
+        const b = document.getElementById('bal-body'); 
+        b.innerHTML = '讀取中...'; 
+        openModal('modal-bal');
+        google.script.run.withSuccessHandler(d => {
+          b.innerHTML = '';
+          (d.detail || []).forEach(i => { b.innerHTML += `<tr><td>${i.name}</td><td class="right-align"><button style="background:none;border:none;text-decoration:underline;color:#2e7d32;cursor:pointer;" onclick="adjustAcc('${i.name}', ${i.current})">${isPrivate ? '***' : Math.round(i.current).toLocaleString('zh-TW')}</button></td></tr>`; });
+          (d.summary || []).forEach(s => { b.innerHTML += `<tr><td><b>${s.label}</b></td><td class="right-align"><b>${isPrivate ? '***' : Math.round(s.value).toLocaleString('zh-TW')}</b></td></tr>`; });
+        }).withFailureHandler(gasError).getFullAccountBalances();
+      }
+
+      /* 帳戶餘額校準彈窗開啟 */
+      function adjustAcc(name, curr) { 
+        adjustTarget = { name: name, curr: curr };
+        const desc = document.getElementById('adjust-desc');
+        if (desc) {
+          desc.innerHTML = `帳戶：<b style="color:#2e7d32;">【${name}】</b><br>目前試算表記錄：<b>NT$ ${Math.round(curr).toLocaleString('zh-TW')}</b>`;
+        }
+        const input = document.getElementById('adjust-val-input');
+        if (input) {
+          input.value = Math.round(curr);
+        }
+        openModal('modal-adjust');
+        setTimeout(() => { if (input) input.focus(); }, 150);
+      }
+
+      /* 確認執行校準 (含防呆) */
+      function confirmAdjustAcc() {
+        if (isLoading) return;
+        const input = document.getElementById('adjust-val-input');
+        const n = input ? input.value.trim() : '';
+        if (n === '' || isNaN(n)) {
+          st('⚠️ 請輸入有效的校準金額！', true);
+          return;
+        }
+        const finalVal = parseFloat(n);
+        isLoading = true;
+        setBtnLoading('btn-confirm-adjust', true, '⏳ 校準中...');
+        google.script.run
+          .withSuccessHandler(m => {
+            st(m);
+            refreshHome();
+            closeModal('modal-adjust');
+            closeModal('modal-bal');
+            isLoading = false;
+            setBtnLoading('btn-confirm-adjust', false, '', '確認校準');
+          })
+          .withFailureHandler(err => {
+            setBtnLoading('btn-confirm-adjust', false, '', '確認校準');
+            gasError(err);
+          })
+          .processAdjustment(adjustTarget.name, finalVal - adjustTarget.curr, finalVal);
+      }
+
+      function openHistory() { switchView('view-history'); loadHistory(); }
+      function loadHistory() {
+        const m = document.getElementById('hist-month').value.split('-').join('/'), l = document.getElementById('history-list'); 
+        l.innerHTML = '🔍 讀取中...';
+        google.script.run.withSuccessHandler(data => {
+          currentHistoryData = data || [];
+          l.innerHTML = currentHistoryData.length === 0 ? '<div class="center" style="color:#999;padding:20px;">本月無任何紀錄</div>' : ''; 
+          let lastDate = "";
+          currentHistoryData.forEach((h, index) => {
+            if(h.date !== lastDate) { l.innerHTML += `<div style="background:#eee;padding:2px 10px;font-size:0.7rem;margin-top:10px;border-radius:4px;">📅 ${h.date}</div>`; lastDate = h.date; }
+            let color = h.type==='收入'?'#fb8c00':(h.category==='轉帳'?'#1e88e5':'#2e7d32');
+            l.innerHTML += `
+              <div class="card-panel hist-card" onclick="openEditModal(${index})" style="border-left:5px solid ${color};padding:10px;margin-bottom:5px;">
+                <b>${h.item}</b> <span class="right">$ ${isPrivate ? '***' : Math.round(h.amount).toLocaleString('zh-TW')}</span><br>
+                <small style="color:#666;">${h.account} ${h.note ? '· ' + h.note : ''}</small>
+              </div>`;
+          });
+        }).withFailureHandler(gasError).getHistoryByDate(m);
+      }
+
+      function openEditModal(index) {
+        const item = currentHistoryData[index];
+        if (!item) return;
+        document.getElementById('edit-row').value = item.rowIndex;
+        document.getElementById('edit-date').value = item.date.split('/').join('-');
+        document.getElementById('edit-item').value = item.item;
+        document.getElementById('edit-amt').value = item.amount;
+        document.getElementById('edit-acc').value = item.account;
+        document.getElementById('edit-note').value = item.note || '';
+        openModal('modal-edit');
+      }
+
+      /* 儲存歷史編輯 (含防呆) */
+      function saveHistoryItem() {
+        if(isLoading) return;
+        const d = {
+          rowIndex: document.getElementById('edit-row').value,
+          date: document.getElementById('edit-date').value.split('-').join('/'),
+          item: (document.getElementById('edit-item').value || '').trim(),
+          amount: document.getElementById('edit-amt').value,
+          account: document.getElementById('edit-acc').value,
+          note: document.getElementById('edit-note').value
+        };
+
+        if(!d.date) { st('⚠️ 請選擇日期！', true); return; }
+        if(!d.item) { st('⚠️ 請填寫項目名稱！', true); return; }
+        const numAmt = parseFloat(d.amount);
+        if(!d.amount || isNaN(numAmt) || numAmt <= 0) { 
+          st('⚠️ 請輸入大於 0 的金額！', true); 
+          return; 
+        }
+        if(!d.account) { st('⚠️ 請選擇帳戶！', true); return; }
+
+        isLoading = true; vib(30);
+        setBtnLoading('btn-save-edit', true, '⏳ 儲存中...');
+        google.script.run
+          .withSuccessHandler(m => {
+            st(m);
+            closeModal('modal-edit');
+            loadHistory(); refreshHome(); isLoading = false;
+            setBtnLoading('btn-save-edit', false, '', '儲存');
+          })
+          .withFailureHandler(err => {
+            setBtnLoading('btn-save-edit', false, '', '儲存');
+            gasError(err);
+          })
+          .updateTransaction(d);
+      }
+
+      /* 點擊刪除按鈕時，打開自訂確認視窗 */
+      function deleteHistoryItem() {
+        if (isLoading) return;
+        openModal('modal-confirm-del');
+      }
+
+      /* 真正執行刪除 */
+      function executeDeleteHistoryItem() {
+        if (isLoading) return;
+        const rowIndex = document.getElementById('edit-row').value;
+        if (!rowIndex) return;
+        isLoading = true; vib(50);
+        setBtnLoading('btn-del-confirm', true, '⏳ 刪除中...');
+        google.script.run
+          .withSuccessHandler(m => {
+            st(m);
+            closeModal('modal-confirm-del');
+            closeModal('modal-edit');
+            loadHistory(); refreshHome(); isLoading = false;
+            setBtnLoading('btn-del-confirm', false, '', '確認刪除');
+          })
+          .withFailureHandler(err => {
+            setBtnLoading('btn-del-confirm', false, '', '確認刪除');
+            gasError(err);
+          })
+          .deleteTransaction(rowIndex);
+      }
+
+      /* 儲存支出 (前端防呆驗證) */
+      function saveExp() { 
+        if(isLoading) return; 
+        let d = { 
+          currency: curs.exp, 
+          date: document.getElementById('date').value.split('-').join('/'), 
+          category: document.getElementById('cat').value,            
+          subItem: document.getElementById('sub').value, 
+          account: document.getElementById('acc').value, 
+          amount: document.getElementById('amt').value, 
+          note: document.getElementById('note').value 
+        }; 
+
+        if(!d.date) { st('⚠️ 請選擇日期！', true); return; }
+        const numAmt = parseFloat(d.amount);
+        if(!d.amount || isNaN(numAmt) || numAmt <= 0) { 
+          st('⚠️ 請輸入大於 0 的金額！', true); 
+          openCalc('amt'); 
+          return; 
+        }
+        if(!d.account) { st('⚠️ 請選擇扣款帳戶！', true); return; }
+
+        isLoading = true; vib(50); 
+        setBtnLoading('btn-save-exp', true, '⏳ 支出儲存中...');
+        google.script.run
+          .withSuccessHandler(m => {
+            vib([30,50,30]);
+            st(m);
+            refreshHome();
+            document.getElementById('amt').value = '';
+            document.getElementById('note').value = '';
+            document.getElementById('exp-twd-preview').style.display = 'none';
+            isLoading = false;
+            setBtnLoading('btn-save-exp', false, '', '儲存支出');
+          })
+          .withFailureHandler(err => {
+            setBtnLoading('btn-save-exp', false, '', '儲存支出');
+            gasError(err);
+          })
+          .saveTransaction(d); 
+      }
+      
+      /* 儲存收入 (前端防呆驗證) */
+      function saveInc() { 
+        if(isLoading) return; 
+        let d = { 
+          currency: curs.inc, 
+          date: document.getElementById('i-date').value.split('-').join('/'), 
+          source: (document.getElementById('i-src').value || '').trim(), 
+          account: document.getElementById('i-acc').value, 
+          amount: document.getElementById('i-amt').value 
+        }; 
+
+        if(!d.date) { st('⚠️ 請選擇日期！', true); return; }
+        if(!d.source) { 
+          st('⚠️ 請輸入收入來源（如薪水）！', true); 
+          document.getElementById('i-src').focus();
+          return; 
+        }
+        const numAmt = parseFloat(d.amount);
+        if(!d.amount || isNaN(numAmt) || numAmt <= 0) { 
+          st('⚠️ 請輸入大於 0 的金額！', true); 
+          openCalc('i-amt'); 
+          return; 
+        }
+        if(!d.account) { st('⚠️ 請選擇入帳帳戶！', true); return; }
+
+        isLoading = true; vib(50); 
+        setBtnLoading('btn-save-inc', true, '⏳ 收入入帳中...');
+        google.script.run
+          .withSuccessHandler(m => {
+            vib([30,50,30]);
+            st(m);
+            refreshHome();
+            document.getElementById('i-amt').value = '';
+            document.getElementById('i-src').value = '';
+            document.getElementById('inc-twd-preview').style.display = 'none';
+            isLoading = false;
+            setBtnLoading('btn-save-inc', false, '', '儲存收入');
+          })
+          .withFailureHandler(err => {
+            setBtnLoading('btn-save-inc', false, '', '儲存收入');
+            gasError(err);
+          })
+          .saveIncome(d); 
+      }
+
+      /* 執行轉帳 (前端防呆驗證) */
+      function saveTra() { 
+        if(isLoading) return; 
+        let d = { 
+          currency: curs.tra, 
+          date: document.getElementById('t-date').value.split('-').join('/'), 
+          fromAccount: document.getElementById('t-f').value, 
+          toAccount: document.getElementById('t-t').value, 
+          amount: document.getElementById('t-amt').value 
+        }; 
+
+        if(!d.date) { st('⚠️ 請選擇日期！', true); return; }
+        if(!d.fromAccount || !d.toAccount) { st('⚠️ 請選擇轉出與轉入帳戶！', true); return; }
+        if(d.fromAccount === d.toAccount) { 
+          st('⚠️ 轉出與轉入不能是同一帳戶！', true); 
+          return; 
+        }
+        const numAmt = parseFloat(d.amount);
+        if(!d.amount || isNaN(numAmt) || numAmt <= 0) { 
+          st('⚠️ 請輸入大於 0 的金額！', true); 
+          openCalc('t-amt'); 
+          return; 
+        }
+
+        isLoading = true; vib(50); 
+        setBtnLoading('btn-save-tra', true, '⏳ 轉帳處理中...');
+        google.script.run
+          .withSuccessHandler(m => {
+            vib([30,50,30]);
+            st(m);
+            refreshHome();
+            document.getElementById('t-amt').value = '';
+            document.getElementById('tra-twd-preview').style.display = 'none';
+            isLoading = false;
+            setBtnLoading('btn-save-tra', false, '', '執行轉帳');
+          })
+          .withFailureHandler(err => {
+            setBtnLoading('btn-save-tra', false, '', '執行轉帳');
+            gasError(err);
+          })
+          .saveTransfer(d); 
+      }
+    </script>
+  </body>
+</html>
+
